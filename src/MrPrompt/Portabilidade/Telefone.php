@@ -52,17 +52,14 @@ class Telefone
      * @return integer
      */
     private function limpaTelefone($telefone)
-    {
+	{
+		$telefone = preg_replace('/[^[:digit:]]/', '', $telefone);
+
         // verifico se existe um telefone de destino
-        if ($telefone === null || strlen($telefone) !== 10) {
-            throw new Exception('Telefone inválido.');
+        if (strlen($telefone) !== 10) {
+            throw new \InvalidArgumentException('Telefone inválido.', 500);
         }
 
-        // limpo o telefone
-        if ($telefone !== null) {
-            $telefone = preg_replace('/[^[:digit:]]/', '', $telefone);
-
-            return $telefone;
-        }
+		return $telefone;
     }
 }

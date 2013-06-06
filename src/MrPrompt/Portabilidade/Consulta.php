@@ -1,16 +1,15 @@
 <?php
 /**
- * Cliente_Portabilidade
- *
  * Consulta a operadora de celular
  *
  * Licença
  *
- * Este código fonte está sob a licença Creative Commons, você pode ler mais
- * sobre os termos na URL: http://creativecommons.org/licenses/by-sa/2.5/br/
+ * Este código fonte está sob a licença GPL-3.0+, você pode ler mais
+ * sobre os termos na URL: http://www.gnu.org/licenses/gpl-3.0.html
  *
- * @copyright  Thiago Paes <thiago@thiagopaes.com.br> (c) 2010
- * @license    http://creativecommons.org/licenses/by-sa/2.5/br/
+ * @author  Thiago Paes <thiago@thiagopaes.com.br> (c) 2013
+ * @license    http://www.gnu.org/licenses/gpl-3.0.html
+ * @package
  */
 namespace MrPrompt\Portabilidade;
 
@@ -29,12 +28,7 @@ class Consulta
     /**
      * @var string
      */
-    private $cookie = '/tmp/cookies_portabilidade.txt';
-
-    /**
-     * @var string
-     */
-    private $captcha = '/tmp/captcha_portabilidade.jpg';
+    private $cookie = 'portabilidade.txt';
 
     /**
      * @var string
@@ -63,7 +57,9 @@ class Consulta
 		$agent .= ' Gecko/20091102 Firefox/3.5.5';
 
 		$this->curl              = new \Curl;
-		$this->curl->cookie_file = $this->cookie;
+		$this->curl->cookie_file = sys_get_temp_dir() 
+								 . DIRECTORY_SEPARATOR 
+								 . $this->cookie;
 		$this->curl->user_agent  = $agent;
     }
 
@@ -74,26 +70,33 @@ class Consulta
 	 * @throws \Exception
      */
     public function baixaCaptcha ()
-    {
+	{
+		// desabilito a checagem de erros, pq o html é externo e já sabe...
+		libxml_use_internal_errors(true);
+
         // envio a primeira chamada
 		$url     = $this->url . '/consulta/consultaSituacaoAtual';
 		$retorno = $this->curl->get($url);
 
-		preg_match_all('/jcid=([[:alnum:]])+/i', $retorno->body, $jcids);
+		// carrego o documento
+		$doc = new \DOMDocument;
+		$doc->loadHTML($retorno->body);
 
-        $this->jcid = str_replace('jcid=', '', $jcids[0][0]);
+		// procuro o iframe com o captcha
+		$xpath  = new \DOMXPath($doc);
+		$iframe = $xpath->query("//iframe")->item(0)->getAttribute('src');
 
-        // Pegando o captcha, que tem sempre o mesmo nome
-        $ret = $this->curl->get($this->url . '/jcaptcha.jpg?jcid=' . $this->jcid);
+		$retorno = $this->curl->get($iframe);
+		$doc2    = new \DOMDocument;
+		$doc2->loadHTML($retorno->body);
 
-		file_put_contents($this->captcha, $ret->body);
-
-        if (filesize($this->captcha) === 0) {
-            throw new \Exception('Erro baixando captcha.');
-        }
+		// procuro o captcha
+		$xpath      = new \DOMXPath($doc2);
+		$imgCaptcha = $xpath->query("//img")->item(0)->getAttribute('src');
+		$urlCaptcha = 'http://www.google.com/recaptcha/api/' . $imgCaptcha;
 
 		$captcha = new Captcha;
-		$captcha->setImagem($this->captcha);
+		$captcha->setImagem($urlCaptcha);
 
         return $captcha;
     }
@@ -109,40 +112,25 @@ class Consulta
     {
         $campos = array(
             'nmTelefone'         => $telefone->getNumero(),
-            'j_captcha_response' => $this->captcha,
+            'j_captcha_response' => $captcha->getTexto(),
             'jcid'               => $this->jcid,
             'method:consultar'   => 'Consultar'
         );
 
-        // enviando o captcha
-        $url = $this->_url . '/consulta/consultaSituacaoAtual.action';
+        $url     = $this->url . '/consulta/consultaSituacaoAtual';
         $retorno = $this->curl->post($url, $campos);
 
-        return $this->trataRetorno($retorno);
-    }
+		$doc = new \DOMDocument;
+		$doc->loadHTML($retorno->body);
 
-    /**
-     * Trata o retorno da consulta em busca da string válida
-     *
-     * @param string $retorno
-     * @return string
-     */
-    private function trataRetorno($retorno)
-    {
-        // removendo quebras de linha
-        $retorno = preg_replace('/(\r|\n)/', '', $retorno);
+		$path  = new \DOMXPath($doc);
+		$grids = $path->query('//body')->item(0)->childNodes;
 
-        // Buscando pela operadora
-        $er = '/(<tr class="gridselecionado">(.+)<\/tr>)/i';
-        preg_match_all($er, $retorno, $resposta);
+		// se não for encontrado conteúdo no tbody, é pq não achou o telefone.
+		if ($grids->length == 0) {
+			throw new \Exception('Telefone não identificado.', 500);
+		}
 
-        if (isset($resposta[0][0]) && strlen($resposta[0][0]) > 2) {
-            $retorno = explode('<td>', $resposta[0][0]);
-
-            // sucesso, retorno a operadora
-            if (isset($retorno[2])) {
-                return ucwords(strip_tags(utf8_encode($retorno[2])));
-            }
-        }
+		return $grids->item(1)->nodeValue;
     }
 }

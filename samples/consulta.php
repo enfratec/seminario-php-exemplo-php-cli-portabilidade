@@ -7,14 +7,30 @@ use MrPrompt\Portabilidade\Telefone;
 use MrPrompt\Portabilidade\Captcha;
 use MrPrompt\Portabilidade\Consulta;
 
-$telefone = new Telefone;
-$telefone->setNumero('4891858982');
+try {
+	echo "Informe o telefone que deseja consultar: ";
 
-$portabilidade = new Consulta;
-$captcha       = $portabilidade->baixaCaptcha();
+	$telefone = new Telefone;
+	$telefone->setNumero(chop(fgets(STDIN)));
 
-echo "Captcha baixado\n";
-echo "Entre com o texto da imagem: ";
+	echo "Baixando captcha...", PHP_EOL;
 
-$captcha->setTexto(chop(fgets(STDIN)));
+	$portabilidade = new Consulta;
+	$captcha       = $portabilidade->baixaCaptcha();
 
+	if ($captcha instanceof Captcha) {
+		echo "Captcha baixado, tentando abrir...", PHP_EOL;
+
+		passthru("open {$captcha->getImagem()}");
+
+		echo "Entre com o texto da imagem: ";
+
+		$captcha->setTexto(chop(fgets(STDIN)));
+	}
+
+	$retorno = $portabilidade->consulta($telefone, $captcha);
+
+	printf("Operadora: %s\n", $retorno);
+} catch (\Exception $e) {
+	printf('Erro inesperado: %s - #%i\n', $e->getMessage(), $e->getCode());
+}
