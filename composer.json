@@ -21,7 +21,7 @@
         }
     },
     "require": {
-        "php": ">=5.3",
+        "php": ">=5.4.13",
         "shuber/curl": "dev-master"
     },
     "minimum-stability": "dev"

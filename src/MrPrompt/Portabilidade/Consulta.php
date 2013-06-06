@@ -12,9 +12,9 @@
  * @copyright  Thiago Paes <thiago@thiagopaes.com.br> (c) 2010
  * @license    http://creativecommons.org/licenses/by-sa/2.5/br/
  */
-namespace MrPrompt;
+namespace MrPrompt/Portabilidade;
 
-class Portabilidade
+class Consulta
 {
     /**
      *
@@ -67,16 +67,6 @@ class Portabilidade
      */
     public function __construct ()
     {
-        // verificando se existe a biblioteca GD
-        if (! function_exists('imagecreatefrompng')) {
-            throw new Exception('Biblioteca GD não encontrada!');
-        }
-
-        // verificando o módulo do curl
-        if (! function_exists('curl_init')) {
-            throw new Exception('Biblioteca Curl não encontrada!');
-        }
-
         // iniciando cURL
         $this->_curl = curl_init();
 
@@ -248,7 +238,7 @@ class Portabilidade
      * @access private
      * @return void
      */
-    private function logout ()
+    public function __destruct()
     {
         // removendo o arquivo temporário do captcha
         if (file_exists($this->_captcha)) {
