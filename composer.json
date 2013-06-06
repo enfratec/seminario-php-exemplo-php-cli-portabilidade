@@ -16,10 +16,13 @@
         "source": "https://github.com/mrprompt/portabilidade"
     },
     "autoload": {
-	"classmap": ["src/"]
+        "psr-0": {
+            "MrPrompt\\Portabilidade": "src/"
+        }
     },
     "require": {
-        "php": ">=5.3"
+        "php": ">=5.3",
+        "shuber/curl": "dev-master"
     },
     "minimum-stability": "dev"
 }

@@ -12,6 +12,8 @@
  * @copyright  Thiago Paes <thiago@thiagopaes.com.br> (c) 2010
  * @license    http://creativecommons.org/licenses/by-sa/2.5/br/
  */
+namespace MrPrompt;
+
 class Portabilidade
 {
     /**
@@ -69,18 +71,18 @@ class Portabilidade
         if (! function_exists('imagecreatefrompng')) {
             throw new Exception('Biblioteca GD não encontrada!');
         }
-        
+
         // verificando o módulo do curl
         if (! function_exists('curl_init')) {
             throw new Exception('Biblioteca Curl não encontrada!');
         }
-        
+
         // iniciando cURL
         $this->_curl = curl_init();
-        
+
         $agent = 'Mozilla/5.0 (Windows; U; Windows NT 5.1; pt-BR; rv:1.9.1.5) ';
         $agent .= 'Gecko/20091102 Firefox/3.5.5';
-        
+
         curl_setopt($this->_curl, CURLOPT_USERAGENT, $agent);
         curl_setopt($this->_curl, CURLOPT_TIMEOUT, 100);
         curl_setopt($this->_curl, CURLOPT_SSL_VERIFYPEER, false);
@@ -95,20 +97,20 @@ class Portabilidade
      * Faço um post pelo Curl
      *
      * @access private
-     * @param string $strEndereco            
-     * @param array $arrPost            
-     * @param string $referer            
+     * @param string $strEndereco
+     * @param array $arrPost
+     * @param string $referer
      * @return string
      */
     private function post ($strEndereco, $arrPost, $referer = null)
     {
         $strPost = http_build_query($arrPost);
-        
+
         curl_setopt($this->_curl, CURLOPT_REFERER, $this->_url);
         curl_setopt($this->_curl, CURLOPT_URL, $strEndereco);
         curl_setopt($this->_curl, CURLOPT_POST, true);
         curl_setopt($this->_curl, CURLOPT_POSTFIELDS, $strPost);
-        
+
         return curl_exec($this->_curl);
     }
 
@@ -116,9 +118,9 @@ class Portabilidade
      * Faço um get pelo Curl
      *
      * @access private
-     * @param string $strEndereco            
-     * @param array $arrPost            
-     * @param string $referer            
+     * @param string $strEndereco
+     * @param array $arrPost
+     * @param string $referer
      * @return string
      */
     private function get ($strEndereco, $referer = null)
@@ -126,7 +128,7 @@ class Portabilidade
         curl_setopt($this->_curl, CURLOPT_REFERER, $this->_url);
         curl_setopt($this->_curl, CURLOPT_URL, $strEndereco);
         curl_setopt($this->_curl, CURLOPT_POST, false);
-        
+
         return curl_exec($this->_curl);
     }
 
@@ -141,26 +143,26 @@ class Portabilidade
         // envio a primeira chamada
         $url = $this->_url . '/consulta/consultaSituacaoAtual.action';
         $retorno = $this->get($url);
-        
+
         preg_match_all('/jcid=([[:alnum:]])+/i', $retorno, $jcids);
         $this->_jcid = str_replace('jcid=', '', $jcids[0][0]);
-        
+
         // Pegando o captcha, que tem sempre o mesmo nome
         $ret = $this->get($this->_url . '/jcaptcha.jpg?jcid=' . $this->_jcid);
-        
+
         file_put_contents($this->_captcha, $ret);
-        
+
         if (filesize($this->_captcha) === 0) {
             throw new Exception('Erro baixando captcha.');
         }
-        
+
         return $this;
     }
 
     public function setTelefone ($telefone)
     {
         $this->_telefone = $this->limpaTelefone($telefone);
-        
+
         return $this;
     }
 
@@ -173,7 +175,7 @@ class Portabilidade
      * Limpa o telefone dado como entrada
      *
      * @access private
-     * @param integer $telefone            
+     * @param integer $telefone
      * @return integer
      */
     private function limpaTelefone ($telefone = null)
@@ -182,11 +184,11 @@ class Portabilidade
         if ($telefone === null || strlen($telefone) !== 10) {
             throw new Exception('Telefone inválido.');
         }
-        
+
         // limpo o telefone
         if ($telefone !== null) {
             $telefone = preg_replace('/[^[:digit:]]/', '', $telefone);
-            
+
             return $telefone;
         }
     }
@@ -206,11 +208,11 @@ class Portabilidade
             'jcid' => $this->_jcid,
             'method:consultar' => 'Consultar'
         );
-        
+
         // enviando o captcha
         $url = $this->_url . '/consulta/consultaSituacaoAtual.action';
         $retorno = $this->post($url, $campos);
-        
+
         return $this->trataRetorno($retorno);
     }
 
@@ -218,21 +220,21 @@ class Portabilidade
      * Treta o retorno da consulta em busca da string válida
      *
      * @access private
-     * @param string $retorno            
+     * @param string $retorno
      * @return string
      */
     private function trataRetorno ($retorno)
     {
         // removendo quebras de linha
         $retorno = preg_replace('/(\r|\n)/', '', $retorno);
-        
+
         // Buscando pela operadora
         $er = '/(<tr class="gridselecionado">(.+)<\/tr>)/i';
         preg_match_all($er, $retorno, $resposta);
-        
+
         if (isset($resposta[0][0]) && strlen($resposta[0][0]) > 2) {
             $retorno = explode('<td>', $resposta[0][0]);
-            
+
             // sucesso, retorno a operadora
             if (isset($retorno[2])) {
                 return ucwords(strip_tags(utf8_encode($retorno[2])));
@@ -252,7 +254,7 @@ class Portabilidade
         if (file_exists($this->_captcha)) {
             unlink($this->_captcha);
         }
-        
+
         // removendo cookies
         if (file_exists($this->_cookie)) {
             unlink($this->_cookie);
