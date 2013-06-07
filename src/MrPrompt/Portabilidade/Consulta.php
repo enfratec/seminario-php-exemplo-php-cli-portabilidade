@@ -52,6 +52,17 @@ class Consulta
      */
     public function __construct()
     {
+		$this->curl = null;
+		$this->jcid = null;
+	}
+
+	/**
+	 * get curl wrapper
+	 *
+	 * @return \Curl
+	 */
+	private function getCurl()
+	{
 		// iniciando cURL
 		$agent  = 'Mozilla/5.0 (Windows; U; Windows NT 5.1; pt-BR; rv:1.9.1.5)'; 
 		$agent .= ' Gecko/20091102 Firefox/3.5.5';
@@ -61,7 +72,9 @@ class Consulta
 								 . DIRECTORY_SEPARATOR 
 								 . $this->cookie;
 		$this->curl->user_agent  = $agent;
-    }
+
+		return $this->curl;
+	}
 
     /**
      * Busca o captcha e tenta quebrar
@@ -76,7 +89,7 @@ class Consulta
 
         // envio a primeira chamada
 		$url     = $this->url . '/consulta/consultaSituacaoAtual';
-		$retorno = $this->curl->get($url);
+		$retorno = $this->getCurl()->get($url);
 
 		// carrego o documento
 		$doc = new \DOMDocument;
@@ -86,7 +99,7 @@ class Consulta
 		$xpath  = new \DOMXPath($doc);
 		$iframe = $xpath->query("//iframe")->item(0)->getAttribute('src');
 
-		$retorno = $this->curl->get($iframe);
+		$retorno = $this->getCurl()->get($iframe);
 		$doc2    = new \DOMDocument;
 		$doc2->loadHTML($retorno->body);
 
@@ -117,14 +130,14 @@ class Consulta
             'method:consultar'   => 'Consultar'
         );
 
-        $url     = $this->url . '/consulta/consultaSituacaoAtual';
-        $retorno = $this->curl->post($url, $campos);
+        $url     = $this->url . '/consulta/executaConsultaSituacaoAtual';
+        $retorno = $this->getCurl()->post($url, $campos);
 
 		$doc = new \DOMDocument;
 		$doc->loadHTML($retorno->body);
 
 		$path  = new \DOMXPath($doc);
-		$grids = $path->query('//body')->item(0)->childNodes;
+		$grids = $path->query('//tbody')->item(0)->childNodes;
 
 		// se não for encontrado conteúdo no tbody, é pq não achou o telefone.
 		if ($grids->length == 0) {

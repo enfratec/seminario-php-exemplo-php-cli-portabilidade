@@ -28,9 +28,11 @@ try {
 		$captcha->setTexto(chop(fgets(STDIN)));
 	}
 
+	echo "Enviando chamada...", PHP_EOL;
+
 	$retorno = $portabilidade->consulta($telefone, $captcha);
 
 	printf("Operadora: %s\n", $retorno);
 } catch (\Exception $e) {
-	printf('Erro inesperado: %s - #%i\n', $e->getMessage(), $e->getCode());
+	printf("Erro inesperado: %s - #%d\n", $e->getMessage(), $e->getCode());
 }
